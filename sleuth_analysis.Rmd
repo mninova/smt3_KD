@@ -11,11 +11,17 @@ library(dplyr)
 library(ggplot2)
 ```
 
-## The original FASTQ files (50 bp, single-end, reverse stranded) were processed with kallisto using a custom transcriptome, which is a combination of the REFSEQ mRNA sequences AND RepBase D. melanogaster TE seqeunces (refGene_plus_repbase)
+### Data pre-processing
 
-./kallisto quant --single -t 4 -l 200 -s 50 -b 30 --rf-stranded -i transcriptome_plus_repbase/refGene_plus_repbase -o YL25 YL25_shW_RNAseq_1st.fq.gz
-./kallisto quant --single -t 4 -l 200 -s 50 -b 30 --rf-stranded -i transcriptome_plus_repbase/refGene_plus_repbase -o YL26 YL26_shSmt3_RNAseq_1st.fq.gz
-./kallisto quant --single -t 4 -l 200 -s 50 -b 30 --rf-stranded -i transcriptome_plus_repbase/refGene_plus_repbase -o YL27 YL27_shW_RNAseq_2nd.fq.gz
-./kallisto quant --single -t 4 -l 200 -s 50 -b 30 --rf-stranded -i transcriptome_plus_repbase/refGene_plus_repbase -o YL28 YL28_shSmt3_RNAseq_2nd.fq.gz
+The original FASTQ files (50 bp, single-end, reverse stranded) were processed with kallisto using a custom transcriptome, which is a combination of the REFSEQ mRNA sequences AND RepBase D. melanogaster TE seqeunces (refGene_plus_repbase)
+
+> ./kallisto quant --single -t 4 -l 200 -s 50 -b 30 --rf-stranded -i transcriptome_plus_repbase/refGene_plus_repbase -o YL25 YL25_shW_RNAseq_1st.fq.gz
+
+> ./kallisto quant --single -t 4 -l 200 -s 50 -b 30 --rf-stranded -i transcriptome_plus_repbase/refGene_plus_repbase -o YL26 YL26_shSmt3_RNAseq_1st.fq.gz
+
+> ./kallisto quant --single -t 4 -l 200 -s 50 -b 30 --rf-stranded -i transcriptome_plus_repbase/refGene_plus_repbase -o YL27 YL27_shW_RNAseq_2nd.fq.gz
+
+> ./kallisto quant --single -t 4 -l 200 -s 50 -b 30 --rf-stranded -i transcriptome_plus_repbase/refGene_plus_repbase -o YL28 YL28_shSmt3_RNAseq_2nd.fq.gz
+
 
 
