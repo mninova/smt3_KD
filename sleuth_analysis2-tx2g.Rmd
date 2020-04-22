@@ -13,10 +13,10 @@ library(DT)
 units<-"est_counts" # if doing transcript-centered.
 ```
 
-
-
-
-## IMPORTANT NOTE
+  
+  
+  
+### **IMPORTANT NOTE**
 
 **This is transcript-level analysis.**
 Importantly, it is also possible to use aggregation transcript p-values to perform gene differential expression, as introduced in [Yi et al., 2017](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-018-1419-z). In this framework, differential expression is performed on transcripts as usual, but then transcript-level p-values can be aggregated to obtain gene-level p values.
@@ -267,4 +267,43 @@ tab.all.ranks2 %>% filter(str_detect(target_id, "^R[12]_"))
 
 
 ## **Gene-based** analysis with **p-value aggregation**
+
+Numbers of genes and TEs that pass the filters (same as in the gene-mode analysis)
+
+```{r gene_numbers}
+tab.gene.stat<-full_join(sleuth_results_LRT_gene, sleuth_results_wald_gene, by="target_id", suffix=c(".lrt",".wald")) %>% mutate("filt_out"=is.na(qval.lrt),  "type"=as.factor(ifelse(str_detect(target_id, "\\|"),"TE","RefSeq")))
+
+tab.gene.stat %>% group_by(type, filt_out) %>% tally() %>% arrange(filt_out) %>% as.data.frame()
+
+```
+
+***
+
+Number of significantly changed elements, either direction:
+
+```{r sign_genes}
+#LRT
+tab.gene.stat %>% filter(qval.lrt<0.05) %>% group_by(type, filt_out) %>% tally() %>% arrange(filt_out) %>% as.data.frame()
+#Wald test
+tab.gene.stat %>% filter(qval.wald<0.05) %>% group_by(type, filt_out) %>% tally() %>% arrange(filt_out) %>% as.data.frame()
+
+```
+
+***
+
+To introduce a fold-change cutoff here, we can use the original transcript counts. Note that each transcript has different fold change. Here, I extract genes based on aggregated qvals < 0.05, and for which at leat 1 transcript has >2-fold change.
+
+```{r sign_fold, warning=F}
+table.counts<-left_join(table.counts, t2g, by="target_id")
+
+#LRT 
+sign<-tab.gene.stat %>% filter(qval.lrt<0.05)
+merged<-inner_join(table.counts, sign, by=c("gene"="target_id"))
+merged %>% filter(abs(log2FC)>1) %>% mutate("change"=ifelse(log2FC>0,"up","down")) %>% select(gene, type, change)  %>% distinct() %>% group_by(type, change) %>% tally() %>% arrange(change) %>% data_frame()
+
+#Wald test 
+sign<-tab.gene.stat %>% filter(qval.wald<0.05)
+merged<-inner_join(table.counts, sign, by=c("gene"="target_id"))
+merged %>% filter(abs(log2FC)>1) %>% mutate("change"=ifelse(log2FC>0,"up","down")) %>% select(gene, type, change)  %>% distinct() %>% group_by(type, change) %>% tally() %>% arrange(change) %>% data_frame()
+```
 
