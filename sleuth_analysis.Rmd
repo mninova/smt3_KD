@@ -22,7 +22,8 @@ units<-"scaled_reads_per_base"
 ```
 
 
-This is gene level analysis.
+This is gene level analysis, using gene_mode=T. ?sleuth_prep
+gene_mode: Set this to TRUE to get the old counts-aggregation method for doing gene-level analysis. This requires aggregation_column to be set. If TRUE, this will override the p-value aggregation mode, but will allow for gene-centric modeling, plotting, and results.
 
 ## Data pre-processing
 
@@ -128,10 +129,9 @@ table.srbp<-sleuth_to_matrix(so, which_df = "obs_norm", which_units = units) %>%
 res<-sleuth_results(so, 'conditionKD', show_all = FALSE)
 res<-dplyr::left_join(res,table.srbp, by="target_id") %>% mutate(signFC=(qval<0.05 & abs(log2FC)>1), significant=qval<0.05) %>% arrange(qval)
 
-
 p<-ggplot(res, aes(mean_obs, b)) + theme_classic() +  ggtitle("MA plot of genes and TEs, sleuth") +
  geom_point(aes(colour = signFC), alpha = 0.2) + 
-  scale_colour_manual(values = c("black", "green4")) + 
+  scale_colour_manual(values = c("black", "red")) + 
     xlab(paste("mean( log(counts + 0.5 ) )")) + 
       ylab(paste0("beta: conditionKD")) 
 

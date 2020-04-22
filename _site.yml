@@ -8,8 +8,8 @@ navbar:
   - text: "Sleuth gene analysis"
     href: sleuth_analysis.html
   - text: "Sleuth transcript analysis"
-    href: sleuth_analysis2-transcript.html
+    href: sleuth_analysis2-tx2g.html
     
-
+#rmarkdown::render_site()
   
 
