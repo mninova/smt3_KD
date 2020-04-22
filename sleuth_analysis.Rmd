@@ -1,14 +1,13 @@
 ---
-title: "smt3 KD analysis"
-knit: (function(input_file, encoding) {
-  out_dir <- 'docs';
-  rmarkdown::render(input_file,
- encoding=encoding,
- output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
-
-author: "Maria Ninova"
-date: "April 20, 2020"
-output: html_document
+title: "smt3 KD analysis genes"
+# knit: (function(input_file, encoding) {
+#  out_dir <- 'docs';
+#  rmarkdown::render(input_file,
+# encoding=encoding,
+# output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
+# author: "Maria Ninova"
+# date: "April 20, 2020"
+# output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -23,7 +22,7 @@ units<-"scaled_reads_per_base"
 ```
 
 
-This is gene level analysis, here is a [transcript based analysis page](../docs_tr/index.html).
+This is gene level analysis.
 
 ## Data pre-processing
 

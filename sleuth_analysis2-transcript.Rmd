@@ -1,14 +1,13 @@
 ---
-title: "smt3 KD analysis, transcript-based"
-knit: (function(input_file, encoding) {
-  out_dir <- 'docs_tr';
-  rmarkdown::render(input_file,
- encoding=encoding,
- output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
-
-author: "Maria Ninova"
-date: "April 20, 2020"
-output: html_document
+title: "smt3 KD analysis transcripts"
+# knit: (function(input_file, encoding) {
+#  out_dir <- 'docs_tr';
+#  rmarkdown::render(input_file,
+# encoding=encoding,
+# output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
+# author: "Maria Ninova"
+# date: "April 20, 2020"
+# output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -22,7 +21,7 @@ library(DT)
 units<-"est_counts" # if doing transcript-centered.
 ```
 
-This is transcript-level analysis, here is a [gene based analysis page](../docs/index.html).
+This is transcript-level analysis.
 
 ## Data pre-processing
 
@@ -36,8 +35,7 @@ The original FASTQ files (50 bp, single-end, reverse stranded) were processed wi
 
 > ./kallisto quant --single -t 4 -l 200 -s 50 -b 30 --rf-stranded -i transcriptome_plus_repbase/refGene_plus_repbase -o YL28 YL28_shSmt3_RNAseq_2nd.fq.gz
 
-Next, we use these files for sleuth analysis, aggregating the data per gene. In order to aggregate, we need a dictionary of transcript to gene.
-It is possible to do transcript-centric analysis as an alternative, but it doesn't change the results that R1 and R2 stand out as most strongly affected. 
+Next, we use these files for sleuth analysis.
 
 ```{r create_so, warning=FALSE}
 
