@@ -222,7 +222,7 @@ From 17975 RefSeq transcripts and 166 RebBase entries which passed the initial f
 187(56) and 36(23) are significantly up-regulated more than 2-fold in smt3 KD,
 and 159(64) or 2 are down-regulated more than 2-fold (qvalue 0.05, Wald test or LTR test).
 
-**Therefore, smt3 KD led to >2 fold up-regulation for ~30% of the TE-s and ~4% of the annotated genes (protein-coding and ncRNAs), and down-regulation of ~1.5% of the annotated genes.** 
+**Therefore, smt3 KD led to >2 fold up/down -regulation for ~1% of the transcripts (protein-coding and ncRNAs), and up-regulation of ~20% of the TEs.**
 
 **R1 and R2 - from relatively lowly expressed genes in the control - become among the top 20 most abundant products in SUMO KD.**  : see below
 ***
