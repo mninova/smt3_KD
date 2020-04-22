@@ -46,7 +46,7 @@ s2c<-data.frame(sample=c("YL25","YL27","YL26","YL28"),condition=c("ctrl", "ctrl"
 s2c$path<-as.character(s2c$path)
 print(s2c)
 
-#this is to create a transcript to gene name dictionary - I just transform each fasta header. It is only necessary if using gene-based aggregation
+#this is to create a transcript to gene name dictionary - I just transform each fasta header.
 t<-read.table("../kallisto/YL26/abundance.tsv", header=T, as.is=T) 
 t2g<-data.frame("target_id"=t$target_id, 
                      gene=sub(":CDS.*","",sub(".*gene=","", t$target_id)))
