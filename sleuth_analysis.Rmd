@@ -22,6 +22,9 @@ units<-"scaled_reads_per_base"
 #units<-"est_counts" # if doing transcript-centered.
 ```
 
+
+This is gene level analysis, here is a [transcript based analysis page](../docs_tr/index.html).
+
 ## Data pre-processing
 
 The original FASTQ files (50 bp, single-end, reverse stranded) were processed with kallisto using a custom transcriptome, which is a combination of the REFSEQ mRNA sequences AND RepBase D. melanogaster TE seqeunces (refGene_plus_repbase)

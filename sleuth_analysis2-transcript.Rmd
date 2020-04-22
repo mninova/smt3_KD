@@ -22,6 +22,8 @@ library(DT)
 units<-"est_counts" # if doing transcript-centered.
 ```
 
+This is transcript-level analysis, here is a [gene based analysis page](../docs/index.html).
+
 ## Data pre-processing
 
 The original FASTQ files (50 bp, single-end, reverse stranded) were processed with kallisto using a custom transcriptome, which is a combination of the REFSEQ mRNA sequences AND RepBase D. melanogaster TE seqeunces (refGene_plus_repbase)
@@ -257,3 +259,4 @@ tab.all.ranks2 %>% filter(str_detect(target_id, "^R[12]_"))
 
 ***
 I'd like to thank Lynn Yi for the greatly helpful tips on using kallisto and sleuth.
+
