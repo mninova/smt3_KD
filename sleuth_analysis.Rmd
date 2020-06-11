@@ -127,11 +127,11 @@ Below it is the same MA plot, but I only marked genes with >2 fold change, calcu
 table.srbp<-sleuth_to_matrix(so, which_df = "obs_norm", which_units = units) %>% as.data.frame() %>% rename(shW.1=YL25, shW.2=YL27, shSmt3.1=YL26, shSmt3.2=YL28) %>% tibble::rownames_to_column("target_id") %>% mutate(x=(shW.1+shW.2)/2, y=(shSmt3.1+shSmt3.2)/2) %>% mutate(log2FC=log2(y/x))
 
 res<-sleuth_results(so, 'conditionKD', show_all = FALSE)
-res<-dplyr::left_join(res,table.srbp, by="target_id") %>% mutate(signFC=(qval<0.05 & abs(log2FC)>1), significant=qval<0.05) %>% arrange(qval)
+res<-dplyr::left_join(res,table.srbp, by="target_id") %>% mutate(signFC=(qval<0.05 & abs(log2FC)>1), significant=qval<0.05)  %>% mutate(signFC2=ifelse(qval<0.05 & abs(log2FC)>2, 2, ifelse(qval<0.05 & abs(log2FC)>1, 1, 0))) %>% arrange(qval)
 
 p<-ggplot(res, aes(mean_obs, b)) + theme_classic() +  ggtitle("MA plot of genes and TEs, sleuth") +
- geom_point(aes(colour = signFC), alpha = 0.2) + 
-  scale_colour_manual(values = c("black", "red")) + 
+ geom_point(aes(colour = as.factor(signFC2), shape = TE), alpha = 0.5) + 
+  scale_colour_manual(values = c("black", "orange","red")) + scale_shape_manual(values = c(15,16)) + 
     xlab(paste("mean( log(counts + 0.5 ) )")) + 
       ylab(paste0("beta: conditionKD")) 
 
@@ -140,6 +140,7 @@ p1<-p + geom_text(data=(res %>% filter(str_detect(target_id,"(smt3|^R1_DM|^R2_DM
 p2<-res %>% mutate("type"=as.factor(ifelse(str_detect(TE, "TRUE"),"TE","RefSeq"))) %>% ggplot(aes(y=log2FC, x=type)) + geom_boxplot() + theme_light() + ggtitle("log2FC by type") + scale_y_continuous(breaks=seq(-5,10,1))
 
 gridExtra::grid.arrange(p1,p2, widths=c(4,1))
+
 
 ```
 
