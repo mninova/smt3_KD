@@ -16,6 +16,7 @@ library(sleuth)
 library(dplyr)
 library(stringr)
 library(ggplot2)
+library(viridis)
 library(DT)
 units<-"scaled_reads_per_base"
 #units<-"est_counts" # if doing transcript-centered.
@@ -58,7 +59,7 @@ t2g$TE<-grepl("\\|", t2g$target_id)
 t2g %>% select(gene,coding, TE) %>% distinct() %>% group_by(coding, TE) %>% tally()
 
 # make "so"
-so <- sleuth_prep(s2c, ~condition, target_mapping = t2g, extra_bootstrap_summary=T, read_bootstrap_tpm = TRUE, aggregation_column = 'gene', gene_mode=TRUE) 
+so <- sleuth_prep(s2c, ~condition, target_mapping = t2g, extra_bootstrap_summary=T, read_bootstrap_tpm = TRUE, aggregation_column = 'gene', gene_mode=TRUE)
 
 ```
 
@@ -120,26 +121,44 @@ p + theme_classic() + ggtitle("MA plot of genes and TEs, sleuth") + geom_text(da
 
 Fig. MA plot from sleuth analysis, Wald test. All genes with qvalue<0.05 are highlighted (warning: beta != log2FC)
 
-Below it is the same MA plot, but I only marked genes with >2 fold change, calculated from the original values in the sleuth table above.
+Below are plots using the sleuth statistics, but including fold change information calculated from TPM values, and from scaled_reads_per_base_values. Combining four tables: srpb values, tmp values, and the LTR and wt statistics. 
+
+
+```{r extended_tables}
+### values tables
+table.tpm<-sleuth_to_matrix(so, which_df = "obs_norm", which_units = "tpm") %>% as.data.frame() %>% rename(shW.1=YL25, shW.2=YL27, shSmt3.1=YL26, shSmt3.2=YL28) %>% tibble::rownames_to_column("target_id") %>% mutate(ctrl=(shW.1+shW.2)/2, kd=(shSmt3.1+shSmt3.2)/2) %>% mutate(log2FC=log2(kd/ctrl))
+
+table.srbp<-sleuth_to_matrix(so, which_df = "obs_norm", which_units = units) %>% as.data.frame() %>% rename(shW.1=YL25, shW.2=YL27, shSmt3.1=YL26, shSmt3.2=YL28) %>% tibble::rownames_to_column("target_id") %>% mutate(ctrl=(shW.1+shW.2)/2, kd=(shSmt3.1+shSmt3.2)/2) %>% mutate(log2FC=log2(kd/ctrl))
+
+table.values<-full_join(table.srbp, table.tpm, by="target_id",suffix=c(".srpb",".tpm"))
+#NOTE: the logFC from the two values are very similar as expected
+
+### stats tables
+table.wald<-sleuth_results(so, 'conditionKD', test_type = 'wt', show_all = TRUE) %>% arrange(target_id) # wald test
+table.lrt<-sleuth_results(so, 'reduced:full', test_type = 'lrt', show_all = TRUE) %>% arrange(target_id) #lrt test
+table.stats<-full_join(table.wald, table.lrt, by="target_id", suffix=c(".wald",".lrt")) 
+
+table.all<-full_join(table.stats, table.values, by="target_id") %>% arrange(desc(log2FC.tpm))
+write.table(table.all, "output/table_all.txt", sep="\t", quote = F, col.names = T) # note that genes which didn't pass sleuth filters will have NA values instead of qval-s
+
+```
+
+Wald test MA plot, but I only marked genes with >2 fold change, calculated from the original values in the sleuth table above. Dots are colored by fold change increase
 *Note: Some values that are Inf cannot be displayed.*
 
-```{r, sleuth_wald_FC,  message=FALSE, fig.height=5, fig.width=8}
-table.srbp<-sleuth_to_matrix(so, which_df = "obs_norm", which_units = units) %>% as.data.frame() %>% rename(shW.1=YL25, shW.2=YL27, shSmt3.1=YL26, shSmt3.2=YL28) %>% tibble::rownames_to_column("target_id") %>% mutate(x=(shW.1+shW.2)/2, y=(shSmt3.1+shSmt3.2)/2) %>% mutate(log2FC=log2(y/x))
+```{r, sleuth_wald_FC,  message=FALSE, fig.height=5, fig.width=8, fig.path='figures/', dev=c('png', 'pdf')}
+tab.plot<-table.all %>% filter(!is.na(qval.wald)) %>% mutate(significant2FC=qval.wald<0.05 & abs(log2FC.srpb)>1) %>% mutate("type"=ifelse(TE.wald=="FALSE","RefSeq","TE"), "FC"=cut(2^abs(log2FC.srpb), breaks=c(0,2, 10, 100, Inf), right = F, include.lowest = T))
 
-res<-sleuth_results(so, 'conditionKD', show_all = FALSE)
-res<-dplyr::left_join(res,table.srbp, by="target_id") %>% mutate(signFC=(qval<0.05 & abs(log2FC)>1), significant=qval<0.05)  %>% mutate(signFC2=ifelse(qval<0.05 & abs(log2FC)>2, 2, ifelse(qval<0.05 & abs(log2FC)>1, 1, 0))) %>% arrange(qval)
+#tab.plot %>% ggplot(aes(mean_obs.wald, b)) + geom_point(aes(col=significant2FC), alpha=0.5) + scale_color_manual(values=c("black","green4"))
 
-p<-ggplot(res, aes(mean_obs, b)) + theme_classic() +  ggtitle("MA plot of genes and TEs, sleuth") +
- geom_point(aes(colour = as.factor(signFC2), shape = TE), alpha = 0.5) + 
-  scale_colour_manual(values = c("black", "orange","red")) + scale_shape_manual(values = c(15,16)) + 
-    xlab(paste("mean( log(counts + 0.5 ) )")) + 
-      ylab(paste0("beta: conditionKD")) 
+p<-tab.plot %>% ggplot(aes(mean_obs.wald, b)) + xlab(paste("mean( log(counts + 0.5 ) )")) + ylab(paste0("beta: conditionKD")) +  theme_classic() +  ggtitle("MA plot of genes and TEs, sleuth") + scale_shape_manual(values=c(16,15))
+p<-p + geom_point(data=(tab.plot %>% filter(qval.wald>=0.05)), aes(mean_obs.wald, b, shape=type), size=2, alpha=0.5) 
+p<-p + geom_point(data=(tab.plot %>% filter(qval.wald<0.05)), aes(mean_obs.wald, b, shape=type, color=FC), size=2, alpha=0.5) + scale_color_manual(values=c("black", plasma(10)[c(8,6,3)]))
+p<-p + geom_text(data=(tab.plot %>% filter(str_detect(target_id,"(smt3|^R1_DM|^R2_DM)"))), aes(mean_obs.wald, b, label=sub("_DM.*","",target_id)), position = position_nudge(x=0.7))
 
-p1<-p + geom_text(data=(res %>% filter(str_detect(target_id,"(smt3|^R1_DM|^R2_DM)"))), aes(mean_obs, b, label=sub("_DM.*","",target_id)), position = position_nudge(x=0.7))
+p.box<-ggplot(tab.plot, aes(y=log2FC.srpb, x=type)) + geom_boxplot() + theme_light() + ggtitle("log2FC by type") + scale_y_continuous(breaks=seq(-5,10,1))
 
-p2<-res %>% mutate("type"=as.factor(ifelse(str_detect(TE, "TRUE"),"TE","RefSeq"))) %>% ggplot(aes(y=log2FC, x=type)) + geom_boxplot() + theme_light() + ggtitle("log2FC by type") + scale_y_continuous(breaks=seq(-5,10,1))
-
-gridExtra::grid.arrange(p1,p2, widths=c(4,1))
+gridExtra::grid.arrange(p,p.box, widths=c(4,1))
 
 
 ```
@@ -149,68 +168,66 @@ Fig. MA plot from sleuth analysis, Wald test. (warning: beta != log2FC). Only ge
 ***
 ***
 
+The size factor of the wald test as Y-axis seems to be difficult to understand for broader reader. Plotting the same but:
+1) shoing TPM values log2FC on the Y-axis, and mean between replicase on X-axis. Coloring will be according to the LRT (!) test.
+
+```{r, FC_MA,  message=FALSE, fig.height=5, fig.width=8, fig.path='figures/', dev=c('png', 'pdf')}
+tab.plot2<-table.all %>% filter(!is.na(qval.lrt)) %>% mutate(significant2FC=qval.lrt<0.05 & abs(log2FC.tpm)>1) %>% mutate("type"=ifelse(TE.wald=="FALSE","RefSeq","TE"), "FC"=cut(2^abs(log2FC.tpm), breaks=c(0,2, 10, 100, Inf), right = F, include.lowest = F)) #excluding infinite values which are un-interpretable
+
+p<-tab.plot2 %>% ggplot(aes(log2((ctrl.tpm+kd.tpm)/2), log2FC.tpm)) + xlab(paste("log2 mean TPM (KD and control)")) + ylab("log2 FC TPM (KD vs control)") +  theme_classic() +  ggtitle("gene expression changes in smt3 KD") + scale_shape_manual(values=c(16,15))
+p<-p + geom_point(data=(tab.plot2 %>% filter(qval.lrt>=0.05)), aes(log2((ctrl.tpm+kd.tpm)/2), log2FC.tpm, shape=type), size=2, alpha=0.5) 
+p<-p + geom_point(data=(tab.plot2 %>% filter(qval.lrt<0.05)), aes(log2((ctrl.tpm+kd.tpm)/2), log2FC.tpm, shape=type, color=FC), size=2, alpha=0.5) + scale_color_manual(values=c("black", plasma(10)[c(8,6,3)]))
+p<-p + geom_text(data=(tab.plot2 %>% filter(str_detect(target_id,"(smt3|^R1_DM|^R2_DM)"))), aes(log2((ctrl.tpm+kd.tpm)/2), log2FC.tpm, label=sub("_DM.*","",target_id)), position = position_nudge(x=0.7))
+
+p.box<-ggplot(tab.plot2, aes(y=log2FC.tpm, x=type)) + geom_boxplot() + theme_light() + ggtitle("log2FC by type") + scale_y_continuous(breaks=seq(-5,10,1))
+
+gridExtra::grid.arrange(p,p.box, widths=c(4,1))
+
+```
+
+***
+***
+
 ### Alternative visualization
 
 This is an alternative visualization of the data, where we do a scatter plot in control vs knockdown.
-We can choose to select the dots based on **qvalues either** from the **Wald test**, or the **LTR test**. The test choice does not change the interpretation of the data in the light of the R1, R2 up-regulation compared to genes. 
+We can choose to select the dots based on **qvalues either** from the **Wald test**, or the **LTR test**. The test choice does not change the interpretation of the data in the light of the R1, R2 up-regulation compared to genes. We select the more stringent LTR test here.
 
-```{r scatter, fig.width=15, fig.height=6}
-### values tables
-table.tpm<-sleuth_to_matrix(so, which_df = "obs_norm", which_units = "tpm") %>% as.data.frame() %>% rename(shW.1=YL25, shW.2=YL27, shSmt3.1=YL26, shSmt3.2=YL28) %>% tibble::rownames_to_column("target_id") %>% mutate(x=(shW.1+shW.2)/2, y=(shSmt3.1+shSmt3.2)/2) %>% mutate(log2FC=log2(y/x))
+```{r scatter, fig.width=15, fig.height=6, fig.path='figures/', dev=c('png', 'pdf')}
+tab.plot3<-table.all %>% filter(!is.na(qval.lrt)) %>% mutate(significant2FC=qval.lrt<0.05 & abs(log2FC.tpm)>1) %>% mutate("type"=ifelse(TE.wald=="FALSE","RefSeq","TE"), "FC"=cut(2^abs(log2FC.tpm), breaks=c(0,2, 10, 100, Inf), right = F, include.lowest = T)) # no need to exclude infinites here, as this is just for coloring
 
-tab.raw<-left_join(table.srbp, table.tpm, by="target_id",suffix=c(".srpb",".tpm")) 
+top20.x<-tail(sort(tab.plot3$ctrl.tpm),20)[1]
+top20.y<-tail(sort(tab.plot3$kd.tpm),20)[1]
 
-### stats tables
-tab.wald<-sleuth_results(so, 'conditionKD', show_all = TRUE) %>% arrange(target_id) # wald test
-tab.lrt<-sleuth_results(so, 'reduced:full', test_type = 'lrt', show_all = TRUE) %>% arrange(target_id) #lrt test
-tab.stat<-left_join(tab.wald, tab.lrt, by="target_id", suffix=c(".wald",".lrt")) 
+p<-ggplot(tab.plot3, aes(log2(ctrl.tpm+1), log2(kd.tpm+1))) + theme_classic() + theme(legend.position="left") + xlab(paste("shW, log2 (av.tpm + 1) ")) + ylab(paste("shSmt3, log2 (av.tpm + 1) ")) + geom_hline(yintercept = log2(top20.y+1), linetype="dotted") + geom_vline(xintercept = log2(top20.x+1), linetype="dotted") + ggtitle("gene and TE expression, RNA-seq [TPM]") + scale_shape_manual(values=c(16,15))
+p<-p + geom_point(data=(tab.plot3 %>% filter(qval.lrt>=0.05)), aes(log2(ctrl.tpm+1), log2(kd.tpm+1), shape=type), size=2, alpha=0.5) 
+p<-p + geom_point(data=(tab.plot3 %>% filter(qval.lrt<0.05)), aes(log2(ctrl.tpm+1), log2(kd.tpm+1), shape=type, color=FC), size=2, alpha=0.5) + scale_color_manual(values=c("black", plasma(10)[c(8,6,3)]))
+p<-p +  geom_text(data=(tab.plot3 %>% filter(str_detect(target_id,"(smt3|^R1_DM|^R2_DM)"))), aes(log2(ctrl.tpm+1), log2(kd.tpm+1), label=sub("_DM.*","",target_id)), position = position_nudge(x=0.7)) + geom_abline(intercept = 0, slope=1, col="blue")  
 
-### all data together fold change is taken from the est_counts (or scaled reads per base for gene analysis)
-tab.plot<-left_join(tab.stat, tab.raw, by="target_id") %>% mutate(signWald=(abs(log2FC.srpb)>1 & qval.wald<0.05), signLRT=(abs(log2FC.srpb)>1 & qval.lrt<0.05))
+p.hist<-ggExtra::ggMarginal(p, type="histogram", size=3, fill = "grey70")
 
-### plot
-p.sub<-geom_text(data=(tab.plot %>% filter(str_detect(target_id,"(smt3|^R1_DM|^R2_DM)"))), aes(log2(x.tpm+1), log2(y.tpm+1), label=sub("_DM.*","",target_id)), position = position_nudge(x=1))
-
-top20.x<-tail(sort(tab.plot$x.tpm),20)[1]
-top20.y<-tail(sort(tab.plot$y.tpm),20)[1]
-
-p<-ggplot(tab.plot, aes(log2(x.tpm+1), log2(y.tpm+1))) + theme_classic() + theme(legend.position="left") + p.sub
-p<-p + scale_color_manual(values=c("black", "beige", "green4")) 
-p<-p + xlab(paste("shW, log2 (av.tpm + 1) ")) + ylab(paste("shSmt3, log2 (av.tpm + 1) "))
-p<-p + geom_hline(yintercept = log2(top20.y+1), linetype="dotted") + geom_vline(xintercept = log2(top20.x+1), linetype="dotted") 
-
-p1<-p + geom_point(aes(colour = paste(signWald)), alpha = 0.4) + geom_abline(intercept = 0, slope=1, col="blue")  
-p2<-p + geom_point(aes(colour = paste(signLRT)), alpha = 0.4)  + geom_abline(intercept = 0, slope=1, col="blue")  
-
-p3<-ggExtra::ggMarginal(p1, type="histogram", size=3, fill = "grey70")
-p4<-ggExtra::ggMarginal(p2, type="histogram", size=3, fill = "grey70")
-
-gridExtra::grid.arrange(p3, p4, nrow=1)
+gridExtra::grid.arrange(p, p.hist, nrow=1)
 
 ```
 
-Figure. Scatter plots of gene expression in control vs KD. The dotted line denotes area that contains the top 20 most highly expressed genes in the corresponding condition. Values log2FC>2 and significant: qvalue (Wald or LRT) < 0.05 are highlighted.
-The histograms above the y-axis and x-axis show the distribution of values. Blue line shows 1:1 ratio.
+Figure. Scatter plots of gene expression in control vs KD. The dotted line denotes area that contains the top 20 most highly expressed genes in the corresponding condition. Values log2FC>2 and significant: qvalue (LRT) < 0.05 are highlighted.
+The histograms above the y-axis and x-axis show the distribution of values.
 
 *Note: Here, pale dots show values ("NA") which did not pass various sleuth filters and should be ignored. Can be removed by "show_all=FALSE".*
 
+
 ***
 ***
+
 
 ## Numerical summary
 
-First we prepare the data in a convenient table of all.
-
-```{r data_prep}
-tab.all<-tab.plot %>% mutate("filt_out"=is.na(b), "type"=as.factor(ifelse(str_detect(TE.wald, "TRUE"),"TE","RefSeq")))
-```
-
-***
 
 Number of RepBase (TE) and other (protein-coding genes,ncRNA, etc) entries from RefSeq (all genes) analyzed; some were filtered out because they didn't pass sleuth criteria (usually very low read counts or large discrepancy between reps).
 
 ```{r num_summary}
-tab.all %>% group_by(type, filt_out) %>% tally() %>% arrange(filt_out)
+table.all<-table.all %>% mutate("type"=ifelse(TE.wald=="FALSE","RefSeq","TE"), filt_out=is.na(b)) 
+table.all %>% group_by(type, filt_out) %>% tally() %>% arrange(filt_out)
 ```
 
 ***
@@ -219,18 +236,18 @@ Number of significantly changed genes (qval 0.05, LRT or Walt Test; logFC (onsca
 
 ```{r signFC_by_type}
 #Wald test
-tab.all %>% filter(abs(log2FC.srpb)>1, qval.wald<0.05) %>% mutate("change"=ifelse(log2FC.srpb>0,"up", "down")) %>% group_by(type,change) %>% tally() %>% arrange(desc(change))
+table.all %>% filter(abs(log2FC.tpm)>1, qval.wald<0.05) %>% mutate("change"=ifelse(log2FC.tpm>0,"up", "down")) %>% group_by(type,change) %>% tally() %>% arrange(desc(change))
 #LRT
-tab.all %>% filter(abs(log2FC.srpb)>1, qval.lrt<0.05) %>% mutate("change"=ifelse(log2FC.srpb>0,"up", "down")) %>% group_by(type,change) %>% tally() %>% arrange(desc(change))
+table.all %>% filter(abs(log2FC.tpm)>1, qval.lrt<0.05) %>% mutate("change"=ifelse(log2FC.tpm>0,"up", "down")) %>% group_by(type,change) %>% tally() %>% arrange(desc(change))
 
 ```
 
 #### Summary of the numbers above:
 From 8996 RefSeq genes and 166 RebBase entries which passed the initial filters, 
-381(322) and 54(50) are significantly up-regulated more than 2-fold in smt3 KD,
-and 154(140) or 3(2) are down-regulated more than 2-fold (qvalue 0.05, Wald test or LTR test).
+numbers indicated above are significantly up-regulated or down-regulated more than 2-fold in smt3 KD, (qvalue 0.05, Wald test or LTR test).
+Note that if we calculate the fold change based on scaled_reads_per_base we get the same results with differences in only 1-2 genes.
 
-**Therefore, smt3 KD led to >2 fold up-regulation for ~30% of the TE-s and ~4% of the annotated genes (protein-coding and ncRNAs), and down-regulation of ~1.5% of the annotated genes.** 
+**Therefore, smt3 KD led to >2 fold up-regulation for ~30% of the TE-s and ~4% of the annotated genes (protein-coding and ncRNAs), and down-regulation of ~1.5% of the annotated genes which passed initial filters. Without filtering, the percentages are around 2% and 0.8% for genes, and 21% for TEs** 
 
 **R1 and R2 - from relatively lowly expressed genes in the control - become among the top 20 most abundant products in SUMO KD.**  : see below
 ***
@@ -238,8 +255,8 @@ and 154(140) or 3(2) are down-regulated more than 2-fold (qvalue 0.05, Wald test
 Although several hundred genes change, it is evident from the plots mostly modestly expressed genes that show the large FC, except for R1 and R2. If we filter genes with over 100 times change in expression log2FC>=~6.64, significant in at least one test:
 
 ```{r FC_filter, warning=FALSE, message=F}
-tab.all %>% filter(log2FC.srpb>log2(100)) %>% filter(qval.wald<0.05 | qval.lrt<0.05) %>%
-                    select(target_id, shW.1.srpb, shW.2.srpb, shSmt3.1.srpb, shSmt3.2.srpb, log2FC.srpb, type, b, qval.wald, qval.lrt) %>% mutate_at(2:5, funs(round(.,3))) %>% arrange(-( shSmt3.1.srpb*0.5+shSmt3.2.srpb*0.5)) %>% datatable(options=list(pageLength=5))
+table.all %>% filter(log2FC.tpm>log2(100)) %>% filter(qval.wald<0.05 | qval.lrt<0.05) %>%
+                    select(target_id, shW.1.tpm, shW.2.tpm, shSmt3.1.tpm, shSmt3.2.tpm, log2FC.tpm, shW.1.srpb, shW.2.srpb, shSmt3.1.srpb, shSmt3.2.srpb, log2FC.srpb, type, b, qval.wald, qval.lrt) %>% mutate_at(2:5, funs(round(.,3))) %>% arrange(-( shSmt3.1.srpb*0.5+shSmt3.2.srpb*0.5)) %>% datatable(options=list(pageLength=5))
 ```
 
 Results show that all other genes, apart from R1 and R2 in this set, are ones that practically have no reads in the control, and just few reads in the KD. 
@@ -253,9 +270,9 @@ Numbers below show the xpression of R1 and R2 elements; including rank of the av
 , or scaled_reads_per_base (gene mode only): The average number of reads mapping to each base across the whole gene*
 
 ```{r Rs_expr_rank}
-tab.all.ranks1<-tab.all %>% filter(!filt_out) %>% select(target_id, matches("sh.*srpb"),matches("(x|y).srpb")) %>% mutate(ctrl.rank.srpb=rank(desc(x.srpb)), kd.rank.srpb=rank(desc(y.srpb)))
+tab.all.ranks1<-table.all %>% filter(!filt_out) %>% select(target_id, matches("sh.*srpb"),matches("(ctrl|kd).srpb")) %>% mutate(ctrl.rank.srpb=rank(desc(ctrl.srpb)), kd.rank.srpb=rank(desc(kd.srpb)))
 
-tab.all.ranks2<-tab.all %>% filter(!filt_out) %>% select(target_id, matches("sh.*tpm"),matches("(x|y).tpm")) %>% mutate(ctrl.rank.tpm=rank(desc(x.tpm)), kd.rank.tpm=rank(desc(y.tpm)))
+tab.all.ranks2<-table.all %>% filter(!filt_out) %>% select(target_id, matches("sh.*tpm"),matches("(ctrl|kd).tpm")) %>% mutate(ctrl.rank.tpm=rank(desc(ctrl.tpm)), kd.rank.tpm=rank(desc(kd.tpm)))
 
 tab.all.ranks1 %>% filter(str_detect(target_id, "^R[12]_"))
 tab.all.ranks2 %>% filter(str_detect(target_id, "^R[12]_"))
