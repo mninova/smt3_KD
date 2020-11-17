@@ -1,0 +1,26 @@
+sessionInfo()
+R version 3.5.1 (2018-07-02)
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+Running under: Windows >= 8 x64 (build 9200)
+
+Matrix products: default
+
+locale:
+[1] LC_COLLATE=English_United States.1252  LC_CTYPE=English_United States.1252    LC_MONETARY=English_United States.1252
+[4] LC_NUMERIC=C                           LC_TIME=English_United States.1252    
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+loaded via a namespace (and not attached):
+ [1] Rcpp_1.0.4.6         plyr_1.8.6           pillar_1.4.4         compiler_3.5.1       tools_3.5.1          digest_0.6.25       
+ [7] bit_1.1-15.2         lattice_0.20-41      DOSE_3.8.2           RSQLite_2.2.0        memoise_1.1.0        lifecycle_0.2.0     
+[13] tibble_3.0.1.9000    gtable_0.3.0         rhdf5_2.26.2         pkgconfig_2.0.3      rlang_0.4.6          Matrix_1.2-18       
+[19] fastmatch_1.1-0      DBI_1.1.0            rstudioapi_0.11      yaml_2.2.1           parallel_3.5.1       gridExtra_2.3       
+[25] fgsea_1.8.0          stringr_1.4.0        dplyr_1.0.0          IRanges_2.16.0       S4Vectors_0.20.1     generics_0.0.2      
+[31] vctrs_0.3.1          stats4_3.5.1         bit64_0.9-7          grid_3.5.1           tidyselect_1.1.0     qvalue_2.14.1       
+[37] Biobase_2.42.0       glue_1.4.1           data.table_1.12.8    R6_2.4.1             AnnotationDbi_1.44.0 BiocParallel_1.16.6 
+[43] GOSemSim_2.8.0       reshape2_1.4.4       GO.db_3.7.0          ggplot2_3.3.1        Rhdf5lib_1.4.3       purrr_0.3.4         
+[49] DO.db_2.9            blob_1.2.1           magrittr_1.5         splines_3.5.1        BiocGenerics_0.28.0  scales_1.1.1        
+[55] ellipsis_0.3.1       colorspace_1.4-1     sleuth_0.30.0        stringi_1.4.6        lazyeval_0.2.2       munsell_0.5.0       
+[61] crayon_1.3.4        
